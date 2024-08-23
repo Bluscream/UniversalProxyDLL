@@ -9,7 +9,8 @@
 #pragma comment(lib, "user32.lib")
 namespace fs = std::filesystem;
 
-constexpr int MAX_PATH = 260; // Define MAX_PATH as a constant
+// #define LOGGING
+
 
 // Function to check if a given path is absolute
 bool is_absolute_path(const std::string& path) {
@@ -97,31 +98,36 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
             if (console) UPD::OpenDebugTerminal();
 
             std::string targetName = FindTargetNameArg(args);
+#ifdef LOGGING
             if (!targetName.empty()) {
                 std::wcout << L"UniversalProxyDLL > Target Name: " << targetName.c_str() << std::endl;
             }
             else {
                 std::wcout << L"UniversalProxyDLL > No --target-name argument found." << std::endl;
             }
+#endif
 
             bool ui = FindFlagArg(args, L"--proxy-ui");
-
+#ifdef LOGGING
             for (const auto& arg : args) {
                 std::wcout << arg << std::endl;
-                if (ui) MessageBoxW(nullptr, arg.c_str(), L"ARGUMENT", MB_OK | MB_ICONERROR);
             }
-
+#endif
             HMODULE htargetDll = load_target_dll(hinstDLL, targetName);
             if (!htargetDll) {
+#ifdef LOGGING
                 std::string errMSG = "UniversalProxyDLL > Failed to load " + targetName + " from " + dllName;
                 std::cerr << errMSG;
                 if (ui) MessageBox(nullptr, errMSG.c_str(), "UniversalProxyDLL Error", MB_OK | MB_ICONERROR);
+#endif
                 bool exit = FindFlagArg(args, L"--proxy-exit");
                 if (exit) ExitProcess(1);
             }
         }
         catch (std::runtime_error& e) {
+#ifdef LOGGING
             std::cerr << e.what() << std::endl;
+#endif
             return FALSE;
         }
     }

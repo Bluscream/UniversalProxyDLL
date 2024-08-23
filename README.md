@@ -38,6 +38,14 @@ Note: You'll have to specify the correct function signature in the same manner a
 
 ## Command Line Arguments
 
+| Argument         | Possible Values          | Default Value | Description                                                                                   |
+|------------------|--------------------------|---------------|-----------------------------------------------------------------------------------------------|
+| `--proxy-target=` | `<string>`       | "ue4ss"           | Specifies the name of the DLL to be loaded dynamically.  Do not include the ".dll" part |
+| `--proxy-console` |            | `false`        | Enables or disables opening a debug terminal upon attaching the DLL.                           |
+| `--proxy-ui`     |            | `false`        | Controls whether to display UI elements like message boxes when certain events occur.       |
+| `--proxy-exit`   |            | `false`          | Causes the process to exit with an error code if the specified DLL fails to load.             |
+
+
 
 ## Supported DLLs
 Yes, technically this is not *universal*, only on paper. See section "Adding support for a DLL". 
@@ -57,6 +65,12 @@ Yes, technically this is not *universal*, only on paper. See section "Adding sup
 * bink2w64
 * vcruntime140
 * vcruntime140_1
+* vcruntime140_1d
+* vcruntime140d
+* vcruntime140_threads
+* vcruntime140_threadsd
+* vcruntime140_clr0400
+* msvcp140
 * msvcp140 (Needs explicit definition in [UniversalProxyDLL.h](https://github.com/techiew/UniversalProxyDLL/blob/master/UniversalProxyDLL.h#L13))
 * msvcp140_1
 * msvcp140_2
