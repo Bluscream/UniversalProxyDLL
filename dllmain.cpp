@@ -9,7 +9,7 @@
 #pragma comment(lib, "user32.lib")
 namespace fs = std::filesystem;
 
-// #define LOGGING
+#define LOGGING
 
 
 // Function to check if a given path is absolute
