@@ -36,6 +36,9 @@ Your callback will be called when the exported function is called **(directly pr
 
 Note: You'll have to specify the correct function signature in the same manner as shown in the example. For instance, the function signature for "DirectInput8Create" used in the example was found [here](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416756(v=vs.85)).
 
+## Command Line Arguments
+
+
 ## Supported DLLs
 Yes, technically this is not *universal*, only on paper. See section "Adding support for a DLL". 
 
