@@ -1,45 +1,42 @@
 #include <cstdint>
-#include <fstream>
-#include <string>
 #include <filesystem>
 #include <vector>
+#include <string>
 #include <sstream>
 #include <iostream>
-#include <tchar.h>
-
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-
-#pragma comment(lib, "user32.lib")
-
 #include "UniversalProxyDLL.h"
-
+#pragma comment(lib, "user32.lib")
 namespace fs = std::filesystem;
 
+constexpr int MAX_PATH = 260; // Define MAX_PATH as a constant
+
 // Function to check if a given path is absolute
-bool is_absolute_path(const std::string& path)
-{
+bool is_absolute_path(const std::string& path) {
     return fs::path(path).is_absolute();
 }
 
-char* GetDllName() {
-    // Allocate memory for the DLL name
-    char* dllName = (char*)malloc(MAX_PATH * sizeof(char));
-    if (dllName == NULL) {
-        return _strdup("");
-    }
-    GetModuleFileName(NULL, dllName, MAX_PATH);
-    char* pLastSlash = strrchr(dllName, '\\');
-    if (pLastSlash != NULL) {
-        pLastSlash++;
-        char* pPeriod = strchr(pLastSlash, '.');
-        if (pPeriod != NULL) {
-            *pPeriod = '\0';
+// Improved function to get the DLL name
+std::string GetDllName() {
+    char* dllName = new char[MAX_PATH];
+    if (GetModuleFileNameA(NULL, dllName, MAX_PATH)) {
+        char* pLastSlash = strrchr(dllName, '\\');
+        if (pLastSlash) {
+            pLastSlash++; // Move past the last slash
+            char* pPeriod = strchr(pLastSlash, '.');
+            if (pPeriod) {
+                *pPeriod = '\0'; // Null-terminate at the period
+            }
         }
+        return std::string(dllName);
     }
-    return dllName;
+    else {
+        delete[] dllName;
+        return "";
+    }
 }
 
+// Parses command line arguments
 std::vector<std::wstring> ParseCommandLine(const std::wstring& cmdline) {
     std::vector<std::wstring> args;
     std::wistringstream iss(cmdline);
@@ -49,61 +46,50 @@ std::vector<std::wstring> ParseCommandLine(const std::wstring& cmdline) {
     }
     return args;
 }
+
+// Finds a specific flag argument
 bool FindFlagArg(const std::vector<std::wstring>& args, const std::wstring& flagName) {
-    for (const auto& arg : args) {
-        if (arg == flagName) {
-            return true;
-        }
-    }
-    return false;
+    return std::find_if(args.begin(), args.end(), [&flagName](const std::wstring& arg) { return arg == flagName; }) != args.end();
 }
+
+// Finds the target name argument
 std::string FindTargetNameArg(const std::vector<std::wstring>& args) {
     for (const auto& arg : args) {
         if (arg.find(L"--proxy-target=") == 0) {
-            size_t pos = arg.find_first_of(L'=', 1); // Find position of '='
+            size_t pos = arg.find_first_of(L'=', 1);
             if (pos != std::wstring::npos) {
-                std::wstring wsValue = arg.substr(pos + 1); // Extract the value after '=' as wstring
-                std::string strValue(wsValue.begin(), wsValue.end()); // Convert wstring to string
-                return strValue;
+                std::wstring wsValue = arg.substr(pos + 1);
+                return std::string(wsValue.begin(), wsValue.end());
             }
         }
     }
-    return "ue4ss"; // Return empty string if not found
+    return ""; // Return empty string if not found
 }
 
-// Function to load a DLL, attempting to use an override path if available
-HMODULE load_target_dll(HMODULE moduleHandle, std::string targetName)
-{
+// Loads a DLL using an override path if available
+HMODULE load_target_dll(HMODULE moduleHandle, const std::string& targetName) {
     HMODULE hModule = nullptr;
-    wchar_t moduleFilenameBuffer[1024] = { '\0' };
-    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
+    wchar_t moduleFilenameBuffer[MAX_PATH] = { '\0' };
+    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, MAX_PATH);
     const auto currentPath = fs::path(moduleFilenameBuffer).parent_path();
     std::string ext = ".dll";
     std::string targetFileName = targetName + ext;
     const fs::path targetPath = currentPath / targetName / targetFileName;
 
-    // Attempt to load target.dll from target directory
     hModule = LoadLibraryW(targetPath.c_str());
-    if (!hModule)
-    {
-        // If loading from target directory fails, load from the current directory
+    if (!hModule) {
         hModule = LoadLibraryA(targetFileName.c_str());
     }
 
     return hModule;
 }
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
-	if (fdwReason == DLL_PROCESS_ATTACH)
-	{
-		DisableThreadLibraryCalls(hinstDLL);
-		try
-		{
-			UPD::CreateProxy(hinstDLL);
-
-            char* dllName = GetDllName();
-
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
+    if (fdwReason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(hinstDLL);
+        try {
+            UPD::CreateProxy(hinstDLL);
+            std::string dllName = GetDllName();
             wchar_t* cmdLine = GetCommandLineW();
             auto args = ParseCommandLine(cmdLine);
 
@@ -111,8 +97,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             if (console) UPD::OpenDebugTerminal();
 
             std::string targetName = FindTargetNameArg(args);
-
-            // Example usage
             if (!targetName.empty()) {
                 std::wcout << L"UniversalProxyDLL > Target Name: " << targetName.c_str() << std::endl;
             }
@@ -122,28 +106,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
             bool ui = FindFlagArg(args, L"--proxy-ui");
 
-            // Example usage
             for (const auto& arg : args) {
                 std::wcout << arg << std::endl;
                 if (ui) MessageBoxW(nullptr, arg.c_str(), L"ARGUMENT", MB_OK | MB_ICONERROR);
             }
-			
+
             HMODULE htargetDll = load_target_dll(hinstDLL, targetName);
-            if (!htargetDll)
-            {
+            if (!htargetDll) {
                 std::string errMSG = "UniversalProxyDLL > Failed to load " + targetName + " from " + dllName;
                 std::cerr << errMSG;
                 if (ui) MessageBox(nullptr, errMSG.c_str(), "UniversalProxyDLL Error", MB_OK | MB_ICONERROR);
                 bool exit = FindFlagArg(args, L"--proxy-exit");
                 if (exit) ExitProcess(1);
             }
-
-		}
-		catch (std::runtime_error e)
-		{
-			std::cerr << e.what() << std::endl;
-			return FALSE;
-		}
-	}
+        }
+        catch (std::runtime_error& e) {
+            std::cerr << e.what() << std::endl;
+            return FALSE;
+        }
+    }
     return TRUE;
 }
