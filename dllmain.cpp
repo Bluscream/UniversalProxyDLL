@@ -100,15 +100,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		DisableThreadLibraryCalls(hinstDLL);
 		try
 		{
-#ifdef DEBUG
-			UPD::OpenDebugTerminal();
-#endif
 			UPD::CreateProxy(hinstDLL);
 
             char* dllName = GetDllName();
 
             wchar_t* cmdLine = GetCommandLineW();
             auto args = ParseCommandLine(cmdLine);
+
+            bool console = FindFlagArg(args, L"--proxy-console");
+            if (console) UPD::OpenDebugTerminal();
 
             std::string targetName = FindTargetNameArg(args);
 
